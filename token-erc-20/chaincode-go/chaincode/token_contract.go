@@ -752,16 +752,12 @@ func (s *SmartContract) GenerateKeyPair(ctx contractapi.TransactionContextInterf
 	//Line below is not deterministic, not a problem because we use only one peer
 	key, _ := rsa.GenerateKey(rand.Reader, keysize)
 
-	prv, err := json.Marshal(key)
+	raw, err := json.Marshal(key)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal priv key: %v", err)
-	}
-	pub, err := json.Marshal(key.PublicKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal pub key: %v", err)
+		return "", fmt.Errorf("failed to marshal key: %v", err)
 	}
 
-	return fmt.Sprintf("\npublic:%v\n\nprivate:%v\n", base64.StdEncoding.EncodeToString(pub), base64.StdEncoding.EncodeToString(prv)), nil
+	return base64.StdEncoding.EncodeToString(raw), nil
 }
 
 func (s *SmartContract) SaveKeyPair(ctx contractapi.TransactionContextInterface) error {
@@ -781,22 +777,29 @@ func (s *SmartContract) SaveKeyPair(ctx contractapi.TransactionContextInterface)
 	if err != nil {
 		return fmt.Errorf("failed to get Transient field: %v", err)
 	}
-	public, ok := tr["public"]
+	key, ok := tr["key"]
 	if !ok {
-		return errors.New("public key not found")
-	}
-	private, ok := tr["private"]
-	if !ok {
-		return errors.New("private key not found")
+		return errors.New("key not found")
 	}
 
-	//public key goes to the ledger to be accessible by everyone
-	//private key goes to implicit private data collection, access control must be implemented in the chaincode!
+	//private key goes to implicit private data collection
+	//access control must be implemented in the chaincode!
+	if err = ctx.GetStub().PutPrivateData(BANK_PDC, BANK_ORG, key); err != nil {
+		return fmt.Errorf("failed to put private key: %v", err)
+	}
+
+	//extract public key and store on-chain
+	var pk rsa.PrivateKey
+	if err = json.Unmarshal(key, &pk); err != nil {
+		return fmt.Errorf("failed to unmarshal key: %v", err)
+	}
+	public, err := json.Marshal(&pk.PublicKey)
+	if err != nil {
+		return fmt.Errorf("failed to marshal public key: %v", err)
+	}
+
 	if err = ctx.GetStub().PutState(BANK_ORG, public); err != nil {
 		return fmt.Errorf("failed to put public key: %v", err)
-	}
-	if err = ctx.GetStub().PutPrivateData(BANK_PDC, BANK_ORG, private); err != nil {
-		return fmt.Errorf("failed to put private key: %v", err)
 	}
 
 	return nil

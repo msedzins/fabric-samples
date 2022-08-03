@@ -1,6 +1,9 @@
 package chaincode
 
 import (
+	"crypto/rsa"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -38,10 +41,10 @@ var _SaveKeyPair = []struct {
 			}
 			return identity
 		},
-		expectedError: "public key not found",
+		expectedError: "key not found",
 	},
 	{
-		name: "No private key",
+		name: "No key",
 		identity: func() cid.ClientIdentity {
 			identity := &testsfakes.FakeTestClientIdentity{}
 			identity.GetMSPIDStub = func() (string, error) {
@@ -51,10 +54,26 @@ var _SaveKeyPair = []struct {
 		},
 		transientdata: func() (map[string][]byte, error) {
 			return map[string][]byte{
-				"public": []byte("SOME KEY"),
+				"some_field": []byte("SOME KEY"),
 			}, nil
 		},
-		expectedError: "private key not found",
+		expectedError: "key not found",
+	},
+	{
+		name: "Wrong key format",
+		identity: func() cid.ClientIdentity {
+			identity := &testsfakes.FakeTestClientIdentity{}
+			identity.GetMSPIDStub = func() (string, error) {
+				return BANK_ORG, nil
+			}
+			return identity
+		},
+		transientdata: func() (map[string][]byte, error) {
+			return map[string][]byte{
+				"key": []byte("SOME KEY"),
+			}, nil
+		},
+		expectedError: "failed to unmarshal key: invalid character 'S' looking for beginning of value",
 	},
 	{
 		name: "OK",
@@ -67,8 +86,13 @@ var _SaveKeyPair = []struct {
 		},
 		transientdata: func() (map[string][]byte, error) {
 			return map[string][]byte{
-				"public":  []byte("SOME PUBLIC KEY"),
-				"private": []byte("SOME PRIVATE KEY"),
+				"key": []byte(
+					func() []byte {
+						sc := &SmartContract{}
+						key, _ := sc.GenerateKeyPair(nil)
+						raw, _ := base64.StdEncoding.DecodeString(key)
+						return raw
+					}()),
 			}, nil
 		},
 		expectedError: "",
@@ -76,9 +100,11 @@ var _SaveKeyPair = []struct {
 			if key != BANK_ORG {
 				return fmt.Errorf("expected: %v, got: %v", BANK_ORG, key)
 			}
-			if string(value) != "SOME PUBLIC KEY" {
-				return fmt.Errorf("expected: %v, got: %v", "SOME PUBLIC KEY", string(value))
+			var pk rsa.PublicKey
+			if err := json.Unmarshal(value, &pk); err != nil {
+				return fmt.Errorf("expectedPutState: failed to unmarshal key: %v", err)
 			}
+
 			return nil
 		},
 		expectedPutPrivateData: func(collection string, key string, value []byte) error {
@@ -88,12 +114,25 @@ var _SaveKeyPair = []struct {
 			if key != BANK_ORG {
 				return fmt.Errorf("expected: %v, got: %v", BANK_ORG, key)
 			}
-			if string(value) != "SOME PRIVATE KEY" {
-				return fmt.Errorf("expected: %v, got: %v", "SOME PRIVATE KEY", string(value))
+
+			var pk rsa.PrivateKey
+			if err := json.Unmarshal(value, &pk); err != nil {
+				return fmt.Errorf("expectedPutPrivateData: failed to unmarshal key: %v", err)
 			}
+
 			return nil
 		},
 	},
+}
+
+func TestGenerateKeyPair(t *testing.T) {
+
+	sc := SmartContract{}
+	r, _ := sc.GenerateKeyPair(nil)
+	raw, _ := base64.StdEncoding.DecodeString(r)
+
+	var key rsa.PrivateKey
+	assert.NoError(t, json.Unmarshal(raw, &key))
 }
 
 func TestSaveKeyPair(t *testing.T) {
