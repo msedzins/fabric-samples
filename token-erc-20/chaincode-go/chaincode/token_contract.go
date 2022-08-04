@@ -1,9 +1,6 @@
 package chaincode
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -731,94 +728,4 @@ func sub(b int, q int) (int, error) {
 	}
 
 	return diff, nil
-}
-
-//Anonymous payments extension
-// type token struct {
-// 	From  string `json:"from"`
-// 	To    string `json:"to"`
-// 	Value int    `json:"value"`
-// }
-
-const BANK_ORG = "Org1MSP"
-const BANK_PDC = "_implicit_org_" + BANK_ORG
-
-//NOTE: Call to this function must not generate blockchain transaction ("query", not "invoke")
-//Otherwise private key will be stored on-chain and revelead to everyone
-func (s *SmartContract) GenerateKeyPair(ctx contractapi.TransactionContextInterface) (string, error) {
-
-	// Generate a key
-	keysize := 2048
-	//Line below is not deterministic, not a problem because we use only one peer
-	key, _ := rsa.GenerateKey(rand.Reader, keysize)
-
-	raw, err := json.Marshal(key)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal key: %v", err)
-	}
-
-	return base64.StdEncoding.EncodeToString(raw), nil
-}
-
-func (s *SmartContract) SaveKeyPair(ctx contractapi.TransactionContextInterface) error {
-
-	// Org1MSP act as a bank and is the only one entitled to generate signing keys
-	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to get MSPID: %v", err)
-	}
-	if clientMSPID != BANK_ORG {
-		return fmt.Errorf("client is not authorized to call SaveKeyPair")
-	}
-
-	//ContractAPI doesn't support transient map....
-	//We must use transient map so that private key is not revealed
-	tr, err := ctx.GetStub().GetTransient()
-	if err != nil {
-		return fmt.Errorf("failed to get Transient field: %v", err)
-	}
-	key, ok := tr["key"]
-	if !ok {
-		return errors.New("key not found")
-	}
-
-	//private key goes to implicit private data collection
-	//access control must be implemented in the chaincode!
-	if err = ctx.GetStub().PutPrivateData(BANK_PDC, BANK_ORG, key); err != nil {
-		return fmt.Errorf("failed to put private key: %v", err)
-	}
-
-	//extract public key and store on-chain
-	var pk rsa.PrivateKey
-	if err = json.Unmarshal(key, &pk); err != nil {
-		return fmt.Errorf("failed to unmarshal key: %v", err)
-	}
-	public, err := json.Marshal(&pk.PublicKey)
-	if err != nil {
-		return fmt.Errorf("failed to marshal public key: %v", err)
-	}
-
-	if err = ctx.GetStub().PutState(BANK_ORG, public); err != nil {
-		return fmt.Errorf("failed to put public key: %v", err)
-	}
-
-	return nil
-}
-
-func (s *SmartContract) BlindSignToken(ctx contractapi.TransactionContextInterface) (string, error) {
-
-	//check if contract has been intilized first
-	initialized, err := checkInitialized(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to check if contract ia already initialized: %v", err)
-	}
-	if !initialized {
-		return "", fmt.Errorf("Contract options need to be set before calling any function, call Initialize() to initialize contract")
-	}
-
-	//check if balanc >= 1
-	//debit account with 1
-	//blind sign with private key
-
-	return "Hello", nil
 }
