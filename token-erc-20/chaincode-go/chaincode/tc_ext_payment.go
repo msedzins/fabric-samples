@@ -80,36 +80,39 @@ func (s *SmartContract) DebitMyAccount(ctx contractapi.TransactionContextInterfa
 
 // //STEP 2 - Payer asks bank to blindsign the token. Bank verifies if STEP 1 took place.
 // //This request should go only to peer(s) that belong to Org1MSP (otherwise it will fail due to lack of private data)
-// func (s *SmartContract) BlindSignToken(ctx contractapi.TransactionContextInterface, blinded string) (string, error) {
+func (s *SmartContract) BlindSignToken(ctx contractapi.TransactionContextInterface, blinded string) (string, error) {
 
-// 	//check if contract has been intilized first
-// 	initialized, err := checkInitialized(ctx)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to check if contract ia already initialized: %v", err)
-// 	}
-// 	if !initialized {
-// 		return "", errors.New("contract options need to be set before calling any function, call Initialize() to initialize contract")
-// 	}
+	debit, err := ctx.GetStub().GetState(DEBIT_PROOF + blinded)
+	if err != nil {
+		return "", fmt.Errorf("failed to get debit proof: %v", err)
+	}
+	if len(debit) == 0 {
+		return "", errors.New("token not paid. please call DebitMyAccount first")
+	}
 
-// 	k, err := ctx.GetStub().GetPrivateData(BANK_PDC, BANK_ORG)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to get private data: %v", err)
-// 	}
-// 	var key rsa.PrivateKey
-// 	if err := json.Unmarshal(k, &key); err != nil {
-// 		return "", fmt.Errorf("failed to unmarshal key: %v", err)
-// 	}
+	k, err := ctx.GetStub().GetPrivateData(BANK_PDC, BANK_ORG)
+	if err != nil {
+		return "", fmt.Errorf("failed to get private data: %v", err)
+	}
+	raw, err := base64.StdEncoding.DecodeString(string(k))
+	if err != nil {
+		return "", fmt.Errorf("failed to decode private key: %v", err)
+	}
+	var key rsa.PrivateKey
+	if err := json.Unmarshal(raw, &key); err != nil {
+		return "", fmt.Errorf("failed to unmarshal key: %v", err)
+	}
 
-// 	raw, err := base64.StdEncoding.DecodeString(blinded)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to decode blinded message: %v", err)
-// 	}
+	raw, err = base64.StdEncoding.DecodeString(blinded)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode blinded message: %v", err)
+	}
 
-// 	// Blind sign the blinded message
-// 	sig, err := rsablind.BlindSign(&key, raw)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to blindsign: %v", err)
-// 	}
+	// Blind sign the blinded message
+	sig, err := rsablind.BlindSign(&key, raw)
+	if err != nil {
+		return "", fmt.Errorf("failed to blindsign: %v", err)
+	}
 
-// 	return base64.StdEncoding.EncodeToString(sig), nil
-// }
+	return base64.StdEncoding.EncodeToString(sig), nil
+}

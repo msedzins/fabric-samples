@@ -1,6 +1,8 @@
 package chaincode
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -10,6 +12,60 @@ import (
 	"github.com/hyperledger/fabric-samples/token-erc-20/chaincode-go/chaincode/tests/testsfakes"
 	"github.com/stretchr/testify/assert"
 )
+
+var _BlindSignToken = []struct {
+	name                   string
+	inBlindedMessage       string
+	expectedError          string
+	expectedGetPrivateData func(collection, key string) ([]byte, error)
+	expectedGetState       func(key string) ([]byte, error)
+}{
+	{
+		name:          "Not paid",
+		expectedError: "token not paid. please call DebitMyAccount first",
+		expectedGetPrivateData: func(collection, key string) ([]byte, error) {
+
+			keysize := 2048
+			k, _ := rsa.GenerateKey(rand.Reader, keysize)
+			raw, _ := json.Marshal(k)
+			return []byte(base64.StdEncoding.EncodeToString(raw)), nil
+		},
+		expectedGetState: func(key string) ([]byte, error) {
+			return []byte(""), nil
+		},
+	},
+	{
+		name:             "Bad input parameter",
+		inBlindedMessage: "BAD_MESSAGE",
+		expectedError:    "failed to decode blinded message: illegal base64 data at input byte 3",
+		expectedGetPrivateData: func(collection, key string) ([]byte, error) {
+
+			keysize := 2048
+			k, _ := rsa.GenerateKey(rand.Reader, keysize)
+			raw, _ := json.Marshal(k)
+			return []byte(base64.StdEncoding.EncodeToString(raw)), nil
+		},
+		expectedGetState: func(key string) ([]byte, error) {
+			return []byte("DEBIT_PROOF"), nil
+		},
+	},
+	{
+		name: "OK",
+		//response from BlindToken
+		inBlindedMessage: "HvJ06atFNIHNY8emzzrAOHH2lr5yJqqi60OgzWc4SUEndCbI59NBPYkEOSgWwc8SjaqSRm3uB+i9qsmCy7Y/I6b1xOHaRxxFdVzx8hCmz5tKD1yxTcPQoPJCKM6q38IMvL7YwMOH+FFqA0G7fL1GZC9OVUWaGBiaAE7K64QyQpW+h9kfqK+k5faAz34hSXwmLtRCGRp0rSRS1Y8ctU6AymFQoLVnD+Sd1LPO0nIEWlwtGJJs8X7tOvfEM0Oz8JpIW/4grPfu7kFQlEgT+oRPauWn/1/D/qBTxLR+GvqNvYSfB9itth36irV9WMaSOWno+C6B8agHClqjJqz94Wiigw==",
+		expectedError:    "",
+		expectedGetPrivateData: func(collection, key string) ([]byte, error) {
+
+			keysize := 2048
+			k, _ := rsa.GenerateKey(rand.Reader, keysize)
+			raw, _ := json.Marshal(k)
+			return []byte(base64.StdEncoding.EncodeToString(raw)), nil
+		},
+		expectedGetState: func(key string) ([]byte, error) {
+			return []byte("DEBIT_PROOF"), nil
+		},
+	},
+}
 
 var _BlindToken = []struct {
 	name             string
@@ -51,6 +107,91 @@ var _BlindToken = []struct {
 				nil
 		},
 	},
+}
+
+var _DebitMyAccount = []struct {
+	name             string
+	expectedError    string
+	expectedGetState func(key string) ([]byte, error)
+}{
+	{
+		name:          "Can't debit twice",
+		expectedError: "debit operation can be only done once for one blinded token",
+		expectedGetState: func(key string) ([]byte, error) {
+			if key == BANK_ACCOUNT {
+				return []byte("BANK_ACCOUNT"), nil
+			}
+
+			return []byte("PROOF_FOUND"), nil
+		},
+	},
+	{
+		name:          "Transfer not initialised",
+		expectedError: "Contract options need to be set before calling any function, call Initialize() to initialize contract",
+		expectedGetState: func(key string) ([]byte, error) {
+			if key == BANK_ACCOUNT {
+				return []byte("BANK_ACCOUNT"), nil
+			}
+
+			return nil, nil
+		},
+	},
+}
+
+func TestBlindSignToken(t *testing.T) {
+
+	//Prepare fixed data
+	sc := SmartContract{}
+	stub := &testsfakes.FakeTestChaincodeStubInterface{}
+	tc := &testsfakes.FakeTestTransactionContextInterface{}
+	tc.GetStubStub = func() shim.ChaincodeStubInterface {
+		return stub
+	}
+
+	for _, tt := range _BlindSignToken {
+		t.Run(tt.name, func(t *testing.T) {
+
+			//Prepare dynamic data
+			stub.GetPrivateDataStub = tt.expectedGetPrivateData
+			stub.GetStateStub = tt.expectedGetState
+
+			r, err := sc.BlindSignToken(tc, tt.inBlindedMessage)
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, r)
+			}
+		})
+	}
+
+}
+
+func TestDebitMyAccount(t *testing.T) {
+
+	//Prepare fixed data
+	sc := SmartContract{}
+	stub := &testsfakes.FakeTestChaincodeStubInterface{}
+	tc := &testsfakes.FakeTestTransactionContextInterface{}
+	tc.GetStubStub = func() shim.ChaincodeStubInterface {
+		return stub
+	}
+
+	for _, tt := range _DebitMyAccount {
+		t.Run(tt.name, func(t *testing.T) {
+
+			//Prepare dynamic data
+			stub.GetStateStub = tt.expectedGetState
+
+			err := sc.DebitMyAccount(tc, "BLINDED")
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
 }
 
 func TestBlindToken(t *testing.T) {
