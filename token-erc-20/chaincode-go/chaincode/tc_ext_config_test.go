@@ -214,6 +214,47 @@ var _GetPrivateKey = []struct {
 	},
 }
 
+var _SetBankAccount = []struct {
+	name             string
+	identity         func() cid.ClientIdentity
+	inAccount        string
+	expectedError    string
+	expectedPutState func(string, []byte) error
+}{
+	{
+		name: "Wrong organisation",
+		identity: func() cid.ClientIdentity {
+			identity := &testsfakes.FakeTestClientIdentity{}
+			identity.GetMSPIDStub = func() (string, error) {
+				return "WRONG_ORG", nil
+			}
+			return identity
+		},
+		expectedError: "client is not authorized to call SetBankAccount",
+	},
+	{
+		name: "OK",
+		identity: func() cid.ClientIdentity {
+			identity := &testsfakes.FakeTestClientIdentity{}
+			identity.GetMSPIDStub = func() (string, error) {
+				return BANK_ORG, nil
+			}
+			return identity
+		},
+		inAccount:     "SOME_ACCOUNT",
+		expectedError: "",
+		expectedPutState: func(key string, value []byte) error {
+			if key != BANK_ACCOUNT {
+				return fmt.Errorf("expected: %v, got: %v", BANK_ACCOUNT, key)
+			}
+			if string(value) != "SOME_ACCOUNT" {
+				return fmt.Errorf("expected: %v, got: %v", "SOME_ACCOUNT", value)
+			}
+			return nil
+		},
+	},
+}
+
 func TestGenerateKeyPair(t *testing.T) {
 
 	//Prepare fixed data
@@ -325,6 +366,34 @@ func TestGetPrivateKey(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedOut, key)
+			}
+
+		})
+	}
+}
+
+func TestSetBankAccount(t *testing.T) {
+
+	//Prepare fixed data
+	sc := SmartContract{}
+	stub := &testsfakes.FakeTestChaincodeStubInterface{}
+	tc := &testsfakes.FakeTestTransactionContextInterface{}
+	tc.GetStubStub = func() shim.ChaincodeStubInterface {
+		return stub
+	}
+
+	for _, tt := range _SetBankAccount {
+		t.Run(tt.name, func(t *testing.T) {
+
+			//Prepare dynamic data
+			tc.GetClientIdentityStub = tt.identity
+			stub.PutStateStub = tt.expectedPutState
+
+			err := sc.SetBankAccount(tc, tt.inAccount)
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
 			}
 
 		})

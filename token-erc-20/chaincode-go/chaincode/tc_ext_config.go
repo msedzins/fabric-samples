@@ -113,23 +113,23 @@ func (s *SmartContract) GetPrivateKey(ctx contractapi.TransactionContextInterfac
 	return string(key), nil
 }
 
-// func (s *SmartContract) SetBankAccount(ctx contractapi.TransactionContextInterface, account string) error {
+func (s *SmartContract) SetBankAccount(ctx contractapi.TransactionContextInterface, account string) error {
 
-// 	// Org1MSP act as a bank and is the only one entitled to set up bank Account
-// 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to get MSPID: %v", err)
-// 	}
-// 	if clientMSPID != BANK_ORG {
-// 		return errors.New("client is not authorized to call SetBankAccount")
-// 	}
+	// Org1MSP act as a bank and is the only one entitled to set up bank Account
+	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get MSPID: %v", err)
+	}
+	if clientMSPID != BANK_ORG {
+		return errors.New("client is not authorized to call SetBankAccount")
+	}
 
-// 	if err = ctx.GetStub().PutState(BANK_ACCOUNT, []byte(account)); err != nil {
-// 		return fmt.Errorf("failed to put public key: %v", err)
-// 	}
+	if err = ctx.GetStub().PutState(BANK_ACCOUNT, []byte(account)); err != nil {
+		return fmt.Errorf("failed to put public key: %v", err)
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // //STEP 1 - Payer debits his account
 // func (s *SmartContract) DebitMyAccount(ctx contractapi.TransactionContextInterface, blinded string) error {
