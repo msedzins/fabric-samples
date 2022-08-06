@@ -8,7 +8,7 @@ The implementation has not undergone a security review or audit and should not b
 
 ## Prerequisites 
 
-Please execute all steps described in [ERC-20 README](README.MD) file first. It includes setting up the network, deployment of the chaincode (the updated one) + initialisation, minting and transfering tokens to Org2.
+Please execute all steps described in [ERC-20 README](README.md) file first. It includes setting up the network, deployment of the chaincode (the updated one) + initialisation, minting and transfering tokens to Org2.
 
 ## Deploy the smart contract to the channel
 
