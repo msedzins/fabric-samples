@@ -1,31 +1,14 @@
-# ERC-20 token scenario
+# ERC-20 token scenario - untraceable payments extension
 
-The ERC-20 token smart contract demonstrates how to create and transfer fungible tokens using an account-based model. In an ERC-20 account-based model, there is an account for each participant that holds a balance of tokens.
-A mint transaction creates tokens in an account, while a transfer transaction debits the caller's account and credits another account.
+Extension builds on top of already existing "ERC-20 token smart contract" implementation.
+It demonstrates how to implement payment system as described in ["Blind signatures for untraceable payments"](http://www.hit.bme.hu/~buttyan/courses/BMEVIHIM219/2009/Chaum.BlindSigForPayment.1982.PDF)
 
-In this sample it is assumed that only one organization (played by Org1) is in a central banker role and can mint new tokens into their account, while any organization can transfer tokens from their account to a recipient's account.
-Accounts could be defined at the organization level or client identity level. In this sample accounts are defined at the client identity level, where every authorized client with an enrollment certificate from their organization implicitly has an account ID that matches their client ID.
-The client ID is simply a base64-encoded concatenation of the issuer and subject from the client identity's enrollment certificate. The client ID can therefore be considered the account ID that is used as the payment address of a recipient.
+**NOTE:**
+The implementation has not undergone a security review or audit and should not be used in production code.
 
-In this tutorial, you will mint and transfer tokens as follows:
+## Prerequisites 
 
-- A member of Org1 uses the `Mint` function to create new tokens into their account. The `Mint` smart contract function reads the certificate information of the client identity that submitted the transaction using the `GetClientIdentity.GetID()` API and credits the account associated with the client ID with the requested number of tokens.
-- The same minter client will then use the `Transfer` function to transfer the requested number of tokens to the recipient's account. It is assumed that the recipient has provided their account ID to the transfer caller out of band. The recipient can then transfer tokens to other registered users in the same fashion.
-
-## Bring up the test network
-
-You can run the ERC-20 token transfer scenario using the Fabric test network. Open a command terminal and navigate to the test network directory in your local clone of the `fabric-samples`. We will operate from the `test-network` directory for the remainder of the tutorial.
-```
-cd fabric-samples/test-network
-```
-
-Run the following command to start the test network:
-```
-./network.sh up createChannel -ca
-```
-
-The test network is deployed with two peer organizations. The `createChannel` flag deploys the network with a single channel named `mychannel` with Org1 and Org2 as channel members.
-The -ca flag is used to deploy the network using certificate authorities. This allows you to use each organization's CA to register and enroll new users for this tutorial.
+Please execute all steps described in [ERC-20 README](README.MD) file first. It includes setting up the network, deployment of the chaincode (the updated one) + initialisation, minting and transfering tokens to Org2.
 
 ## Deploy the smart contract to the channel
 
