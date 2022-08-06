@@ -17,7 +17,6 @@ import (
 const BANK_ORG = "Org1MSP"
 const BANK_PDC = "_implicit_org_" + BANK_ORG
 const BANK_ACCOUNT = "account_" + BANK_ORG
-const DEBIT_PROOF = "debit_" + BANK_ORG
 
 //NOTE: Call to this function must not generate blockchain transaction ("query", not "invoke")
 //Otherwise private key will be stored on-chain and revealed to everyone
