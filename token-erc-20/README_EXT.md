@@ -10,9 +10,16 @@ The implementation has not undergone a security review or audit and should not b
 
 Please execute all steps described in [ERC-20 README](README.md) file first. It includes setting up the network, deployment of the chaincode (the updated one) + initialisation, minting and transfering tokens to Org2.
 
-## Deploy the smart contract to the channel
+## Configuration
 
-You can use the test network script to deploy the ERC-20 token contract to the channel that was just created. Deploy the smart contract to `mychannel` using the following command:
+### Generate RSA key pair (public and private)
+```
+peer chaincode query -C mychannel -n token_erc20 -c '{"function":"GenerateKeyPair","Args":[]}'
+```
+
+**NOTE:**
+Call should go to the peer(s) owned by Org1 (which represents Bank).
+Additionally, no transaction must be generated (otherwise the response will be stored on-chain).
 
 **For a Go Contract:**
 ```
