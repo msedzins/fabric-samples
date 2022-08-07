@@ -116,3 +116,7 @@ peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c 
 1. In our example, for simplification, the call is made by Org2MSP.
 2. The call can be made only one to avoid double spending.
 
+After the call, Payee account should be credited by 1 token. Can be  verified by running:
+```
+peer chaincode query -C mychannel -n token_erc20 -c '{"function":"ClientAccountBalance","Args":[]}'
+```
