@@ -60,14 +60,18 @@ In the example, minter account is used for this purpose. Propobably it's better 
 #UUID represents our token
 uuid=$(uuidgen)
 
-BLINDED=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindToken","Args":["'"$uuid"'"]}') 
+RESPONSE=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindToken","Args":["'"$uuid"'"]}') 
 ```
 
 **NOTE:**
 To not reveal the data the request must go to the peer that is trusted to the payer (belongs to Org2MSP in our case) + no blockchain transaction can be generated
 
-### Debit account \[Payer;Org1MSP]
+### Debit account \[Payer;Org2MSP]
+```
+BLINDED=$(echo $RESPONSE | jq -r '.Blinded')
 
+peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"DebitMyAccount","Args":["'"$BLINDED"'"]}')
+```
 
 Originally, there is one step -> bank blind signs the token + debits the account of the client. It won't work for HLF because we can't prevent situation in which client calls the function, gets the signature, but doesn't generate the transaction. Hence, we split the  process into two steps:
 1. debit the account (it must generate the transaction)
