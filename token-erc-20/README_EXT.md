@@ -64,3 +64,8 @@ BLINDED=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"Blin
 
 **NOTE:**
 To not reveal the data the request must go to the peer that is trusted to the payer (belongs to Org2MSP in our case) + no blockchain transaction can be generated
+
+### Debit account \[Payer;Org1MSP]
+
+
+Originally, there is one step -> bank blind sign the token + debits the account of the client. It won't work for HLF because we can't prevent situation in which client calls the function but doesn't generate the transaction. Hence, we split the  process into two steps - debit the
