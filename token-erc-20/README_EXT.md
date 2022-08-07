@@ -62,5 +62,5 @@ uuid=$(uuidgen)
 BLINDED=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindToken","Args":["'"$uuid"'"]}') 
 ```
 
-**NOTE:***
+**NOTE:**
 To not reveal the data the request must go to the peer that is trusted to the payer (belongs to Org2MSP in our case) + no blockchain transaction can be generated
