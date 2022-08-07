@@ -42,4 +42,20 @@ PUBKEY=$(echo $KEY | base64 -d | sed 's/,"D".*/}\n/' | base64)
 peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"SavePublicKey","Args":["'"$PUBKEY"'"]}'  --waitForEvent
 ```
 
+### Set bank account 
+```
+BANK_ACCOUNT=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"ClientAccountID","Args":[]}')
+
+peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"SetBankAccount","Args":["'"$BANK_ACCOUNT"'"]}'  --waitForEvent
+```
+
+Bank account is used as a placeholder for blinded tokens (described in the "Payment" section)
+In the example, minter account is used for this purpose. Propobably it's better to have a dedicated account.
+
 ## Payment 
+
+### Generate UUID and blind it \[Payer;Org2MSP]
+```
+
+```
+
