@@ -95,10 +95,17 @@ The call to BlindSignToken will only succeed if call to DebitMyAccount was made 
 ```
 UNBLINDER=$(echo $RESPONSE | jq -r '.Unblinder')
 
-UNBLIND_SIG=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"UnblindSignature","Args":["'"$SIG"'","'"$UNBLINDER"'"]}'))
+UNBLIND_SIG=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"UnblindSignature","Args":["'"$SIG"'","'"$UNBLINDER"'"]}')
 ```
 
 To not reveal the data - the call should go to the peer(s) owned by the Payer (Org2MSP). 
 
 ### Use the token \[Payee;Org3MSP]
+```
+peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"CreditMyAccount","Args":["'"$UNBLIND_SIG"'","'"$uuid"'"]}') --waitForEvent
+```
+
+**NOTE:**
+1. In our example, for simplification, the call is made by Org2MSP.
+2. The call can be made only one to avoid double spending.
 
