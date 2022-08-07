@@ -56,6 +56,11 @@ In the example, minter account is used for this purpose. Propobably it's better 
 
 ### Generate token and blind it \[Payer;Org2MSP]
 ```
+#UUID represents our token
+uuid=$(uuidgen)
 
+BLINDED=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindToken","Args":["'"$uuid"'"]}') 
 ```
 
+**NOTE:***
+To not reveal the data the request must go to the peer that is trusted to the payer (belongs to Org2MSP in our case) + no blockchain transaction can be generated
