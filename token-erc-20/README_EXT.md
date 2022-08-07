@@ -10,9 +10,9 @@ The implementation has not undergone a security review or audit and should not b
 
 Please execute all steps described in [ERC-20 README](README.md) file first. It includes setting up the network, deployment of the chaincode (the updated one) + initialisation, minting and transfering tokens to Org2.
 
-## Configuration
+## Configuration \[as Org1MSP]
 
-### Generate RSA key pair (public and private)
+### Generate RSA key pair (public and private) 
 ```
 KEY=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"GenerateKeyPair","Args":[]}')
 ```
@@ -31,4 +31,15 @@ peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c 
 **NOTE:**
 We are saving data in PDC not on-chain to keep it private. The request should go only to the peers owned by Org1. To that end, we modify TARGET_TLS_OPTIONS appropriately. 
 
+### Save public key on-chain
+```
+#Restore original configuration (TARGET_TLS_OPTIONS)
+source env_org1.sh 
 
+#jq doesn't preserve  BigInt values. It can't be used.
+PUBKEY=$(echo $KEY | base64 -d | sed 's/,"D".*/}\n/' | base64) 
+
+peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"SavePublicKey","Args":["'"$PUBKEY"'"]}'  --waitForEvent
+```
+
+## Payment 
