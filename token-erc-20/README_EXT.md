@@ -17,7 +17,6 @@ Please execute all steps described in [ERC-20 README](README.md) file first. It 
 KEY=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"GenerateKeyPair","Args":[]}')
 ```
 
-**NOTE:**
 Call should go to the peer(s) owned by Org1 (which represents Bank).
 Additionally, no transaction must be generated (otherwise the response will be stored on-chain).
 
@@ -28,7 +27,6 @@ export TARGET_TLS_OPTIONS=(-o localhost:7050 --ordererTLSHostnameOverride ordere
 peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"SavePrivateKey","Args":[]}' --transient "{\"key\":\"$KEY\"}" --waitForEvent
 ```
 
-**NOTE:**
 We are saving data in PDC not on-chain to keep it private. The request should go only to the peers owned by Org1. To that end, we modify TARGET_TLS_OPTIONS appropriately. 
 Please note that we are using implicit PDC which requires only one endorsement.
 
@@ -63,7 +61,6 @@ uuid=$(uuidgen)
 RESPONSE=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindToken","Args":["'"$uuid"'"]}') 
 ```
 
-**NOTE:**
 To not reveal the data the request must go to the peer that is trusted to the payer (belongs to Org2MSP in our case) + no blockchain transaction can be generated
 
 ### Debit account \[Payer;Org2MSP]
@@ -86,10 +83,22 @@ BLINDED=$(echo $RESPONSE | jq -r '.Blinded')
 export CORE_PEER_ADDRESS=localhost:7051 
 export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
 
-peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindSignToken","Args":["'"$BLINDED"'"]}'
+SIG=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindSignToken","Args":["'"$BLINDED"'"]}')
 
 #restore original configuration
 source env_org2.sh 
 ```
 
 The call to BlindSignToken will only succeed if call to DebitMyAccount was made first. It must go to the peer which has an access to private key, which is stored in Org1MSP private data collection.
+
+### Unblind the signature \[Payer;Org2MSP]
+```
+UNBLINDER=$(echo $RESPONSE | jq -r '.Unblinder')
+
+UNBLIND_SIG=$(peer chaincode query -C mychannel -n token_erc20 -c '{"function":"UnblindSignature","Args":["'"$SIG"'","'"$UNBLINDER"'"]}'))
+```
+
+To not reveal the data - the call should go to the peer(s) owned by the Payer (Org2MSP). 
+
+### Use the token \[Payee;Org3MSP]
+
