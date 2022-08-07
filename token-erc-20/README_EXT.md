@@ -30,6 +30,7 @@ peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c 
 
 **NOTE:**
 We are saving data in PDC not on-chain to keep it private. The request should go only to the peers owned by Org1. To that end, we modify TARGET_TLS_OPTIONS appropriately. 
+Please note that we are using implicit PDC which requires only one endorsement.
 
 ### Save public key on-chain
 ```
@@ -68,4 +69,6 @@ To not reveal the data the request must go to the peer that is trusted to the pa
 ### Debit account \[Payer;Org1MSP]
 
 
-Originally, there is one step -> bank blind sign the token + debits the account of the client. It won't work for HLF because we can't prevent situation in which client calls the function but doesn't generate the transaction. Hence, we split the  process into two steps - debit the
+Originally, there is one step -> bank blind signs the token + debits the account of the client. It won't work for HLF because we can't prevent situation in which client calls the function, gets the signature, but doesn't generate the transaction. Hence, we split the  process into two steps:
+1. debit the account (it must generate the transaction)
+2. ask for a signature
