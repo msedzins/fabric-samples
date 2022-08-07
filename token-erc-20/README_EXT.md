@@ -54,7 +54,7 @@ In the example, minter account is used for this purpose. Propobably it's better 
 
 ## Payment 
 
-### Generate UUID and blind it \[Payer;Org2MSP]
+### Generate token and blind it \[Payer;Org2MSP]
 ```
 
 ```
