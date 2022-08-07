@@ -67,12 +67,19 @@ To not reveal the data the request must go to the peer that is trusted to the pa
 ```
 BLINDED=$(echo $RESPONSE | jq -r '.Blinded')
 
-peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"DebitMyAccount","Args":["'"$BLINDED"'"]}'
+peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"DebitMyAccount","Args":["'"$BLINDED"'"]}' --waitForEvent
 ```
 
 Originally, there is one step -> bank blind signs the token + debits the account of the client. It won't work for HLF because we can't prevent situation in which client calls the function, gets the signature, but doesn't generate the transaction. Hence, we split the  process into two steps:
 1. debit the account (it must generate the transaction)
 2. ask for a signature
+
+After the call, Payer account should be debited by 1 token. Can be  verified by running:
+```
+peer chaincode query -C mychannel -n token_erc20 -c '{"function":"ClientAccountBalance","Args":[]}'
+```
+
+Minter account is credited by 1 token respectively.
 
 ### Blind sign token \[Payer;Org2MSP]
 ```
