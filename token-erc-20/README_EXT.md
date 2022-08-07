@@ -70,9 +70,26 @@ To not reveal the data the request must go to the peer that is trusted to the pa
 ```
 BLINDED=$(echo $RESPONSE | jq -r '.Blinded')
 
-peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"DebitMyAccount","Args":["'"$BLINDED"'"]}')
+peer chaincode invoke "${TARGET_TLS_OPTIONS[@]}" -C mychannel -n token_erc20 -c '{"function":"DebitMyAccount","Args":["'"$BLINDED"'"]}'
 ```
 
 Originally, there is one step -> bank blind signs the token + debits the account of the client. It won't work for HLF because we can't prevent situation in which client calls the function, gets the signature, but doesn't generate the transaction. Hence, we split the  process into two steps:
 1. debit the account (it must generate the transaction)
 2. ask for a signature
+
+### Blind sign token \[Payer;Org2MSP]
+```
+BLINDED=$(echo $RESPONSE | jq -r '.Blinded')
+
+#call is made as Org2MSP
+#but goes to the peer(s) owned by Org1MSP  (otherwise it will fail due to lack of private data) 
+export CORE_PEER_ADDRESS=localhost:7051 
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+
+peer chaincode query -C mychannel -n token_erc20 -c '{"function":"BlindSignToken","Args":["'"$BLINDED"'"]}'
+
+#restore original configuration
+source env_org2.sh 
+```
+
+The call to BlindSignToken will only succeed if call to DebitMyAccount was made first. It must go to the peer which has an access to private key, which is stored in Org1MSP private data collection.
