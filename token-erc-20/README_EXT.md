@@ -1,6 +1,6 @@
 # ERC-20 token scenario - untraceable payments extension
 
-Extension builds on top of already existing "ERC-20 token smart contract" implementation.
+Extension builds on top of already existing "ERC-20 token smart contract" implementation (*chaincode-go* chaincode).
 It demonstrates how to implement payment system as described in ["Blind signatures for untraceable payments"](http://www.hit.bme.hu/~buttyan/courses/BMEVIHIM219/2009/Chaum.BlindSigForPayment.1982.PDF)
 
 **NOTE:**
